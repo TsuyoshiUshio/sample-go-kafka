@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: azure-servicebus-queue-secret
+data:
+  ConnectionString: YOUR_CONNECTION_STRING_HERE
+  queueName: aGVsbG8=
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledJob
+metadata:
+  name: azure-servicebus-queue-consumer
+  namespace: default
+spec:
+  jobTargetRef:
+    template:
+      spec:
+        containers:
+        - name: azure-servicebus-queue-receive
+          image: tsuyoshiushio/azure-servicebus-queue-client:dev
+          imagePullPolicy: Always
+          command: ["receive"]
+          envFrom:
+            - secretRef:
+                name: azure-servicebus-queue-secret
+        restartPolicy: Never
+    backoffLimit: 4  
+  pollingInterval: 30   # Optional. Default: 30 seconds
+  cooldownPeriod: 30   # Optional. Default: 300 seconds
+  maxReplicaCount: 3  # Optional. Default: 100
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 2
+  triggers:
+  - type: azure-queue
+    authenticationRef:
+      name: azure-queue-auth
+    metadata:
+      queueName: "hello"
+      messageCount: "1"
+---
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: azure-queue-auth
+spec:
+  secretTargetRef:
+  - parameter: connection
+    name: azure-servicebus-queue-secret
+    key: ConnectionString
