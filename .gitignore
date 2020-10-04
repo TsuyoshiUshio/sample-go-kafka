@@ -1,2 +1,3 @@
 .vscode
 deploy/deploy-consumer-job.yaml
+__debug_bin

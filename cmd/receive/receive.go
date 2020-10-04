@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	fmt.Println("Azure ServiceBus Queue Sender")
+	fmt.Println("Azure ServiceBus Queue Receiver")
 	connectionString := os.Getenv("ConnectionString")
 	queueName := os.Getenv("queueName")
 	fmt.Printf("ConnectionString: '%s'\n", connectionString)
@@ -30,6 +30,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Cannot create a client for the queue", err)
 	}
+
 	err = q.ReceiveOne(
 		ctx,
 		servicebus.HandlerFunc(func(ctx context.Context, message *servicebus.Message) error {
@@ -38,6 +39,8 @@ func main() {
 		}))
 
 	if err != nil {
-		log.Fatal("Message Receive Failed", err)
+		// Timeout could happen if there is no message on the queue.
+		log.Println("Message Receive Failed", err)
+		log.Println("If it is timeout, it could happen where is no message on the queue.")
 	}
 }

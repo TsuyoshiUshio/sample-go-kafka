@@ -1,6 +1,6 @@
-# KEDA Azure Storage Queue Trigger Samples
+# KEDA Azure ServiceBus Trigger Samples
 
-Sample program for sending/receiving queue and KEDA v2 Azure Storage Queue Trigger. 
+Sample program for sending/receiving queue and KEDA v2 Azure ServiceBus Trigger. 
 
 # How to run the sample
 
