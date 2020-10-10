@@ -39,6 +39,13 @@ spec:
     metadata:
       queueName: "hello"
       messageCount: "1"
+  - type: azure-servicebus
+    authenticationRef:
+      name: azure-servicebus-queue-auth
+    metadata:
+      queueName: "abc"
+      connectionFromEnv: "ConnectionString"
+      messageCount: "1"      
 ---
 apiVersion: keda.sh/v1alpha1
 kind: TriggerAuthentication
