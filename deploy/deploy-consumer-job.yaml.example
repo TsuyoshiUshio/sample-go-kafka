@@ -30,6 +30,8 @@ spec:
   maxReplicaCount: 3  # Optional. Default: 100
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 2
+  scalingStrategy: 
+    strategy: "default"
   triggers:
   - type: azure-queue
     authenticationRef:
