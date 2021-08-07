@@ -1,14 +1,13 @@
-FROM golang:1.13.1 as builder
+FROM golang:1.16.2-alpine3.13 as builder
 
-# Copy the code from the host and compile it
-WORKDIR $GOPATH/src/github.com/TsuyoshiUshio/sample-go-storage-queue
+RUN mkdir /workplace
+WORKDIR /workplace
 
 COPY . .
 
-RUN CGO_ENABLED=0 GOOS=linux go install ./...
+RUN cd cmd/receive && go build -o receive receive.go
 
-FROM scratch
-COPY --from=builder /go/bin/receive /go/bin/send /usr/local/bin/
-# Scratch image requires this line for ca certificate
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-CMD ["receive"]
+FROM alpine:3.13 
+COPY --from=builder /workplace/cmd/receive/receive /receive
+
+CMD ["/receive"]

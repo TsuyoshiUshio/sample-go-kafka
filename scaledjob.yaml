@@ -1,0 +1,53 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledJob
+metadata: 
+  name: kafka-consumer
+  namespace: default
+spec:
+  jobTargetRef:
+    template:
+      metadata:
+        labels:
+          hello: world
+      spec:
+        containers:
+        - name: kafka-consumer
+          image: tsuyoshiushio/kafka-consumer:0.2
+          imagePullPolicy: Always
+          envFrom:
+          - secretRef:
+              name: keda-kafka-pod-secrets2
+        restartPolicy: Never
+  pollingInterval: 5
+  maxReplicaCount: 10
+  successfulJobsHistoryLimit: 10
+  failedJobsHistoryLimit: 10
+  triggers:
+  - type: kafka
+    metadata:
+      bootstrapServers: tsushikafka.servicebus.windows.net:9093
+      consumerGroup: $Default
+      topic: workitems
+      lagThreshold: '5'
+    authenticationRef:
+      name: kafka-trigger-auth
+---
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: kafka-trigger-auth
+  namespace: default
+spec:
+  secretTargetRef:
+  - parameter: sasl
+    name: keda-kafka-secrets
+    key: sasl
+  - parameter: username
+    name: keda-kafka-secrets
+    key: username
+  - parameter: password
+    name: keda-kafka-secrets
+    key: password    
+  - parameter: tls
+    name: keda-kafka-secrets
+    key: tls

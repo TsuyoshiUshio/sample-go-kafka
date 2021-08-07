@@ -1,21 +1,27 @@
-# KEDA Azure ServiceBus Trigger Samples
+# KEDA Kafka Scaled Job Samples
 
-Sample program for sending/receiving queue and KEDA v2 Azure ServiceBus Trigger. 
+Sample program for sending/receiving message to Kafka Broker and KEDA v2 Kafka Trigger
 
 # How to run the sample
 
 ## Prerequisite
-* Install Go lang (1.13+)
+* Install Go lang (1.16+)
 * Docker
 
 ## Set Enviornment Variables for the container
 
+The current sample is set the broker as EventHubs. EventHubs using `username` and `password` as the authentication.
+
 | Key | Description |
 | ---- | ------ |
-| ConnectionString | The Connection String for the Azure Storage Account |
-| queueName | The name of the queue |
+| SASL_PASSWORD | The Password of Kafka Broker (In case of EventHub Kafka API, it is connection string) |
+| BROKER_LIST | The url of the broker |
 
 ## Run queue receiver/sender
+
+### Prerequiste 
+
+Set the environment described in the Docker section. `SASL_PASSWORD` and `BROKER_LIST`. 
 
 ### receiver
 
@@ -32,7 +38,7 @@ Send 100 messages to the Azure Storage Queue.
 
 ```bash
 $ cd cmd/send
-$ go run send.go 100
+$ go run send.go -n 100 -m "*** hello world ***" // -n the number of sending the message. -m a message to send
 ```
 
 # How to debug
@@ -54,8 +60,8 @@ It requires, VSCode [Go extension](https://marketplace.visualstudio.com/items?it
             "mode": "auto",
             "program": "${fileDirname}",
             "env": {
-                "ConnectionString": "YOUR_STORAGE_ACCOUNT_CONNECTION_STRING_HERE",
-                "QueueName":"hello"
+                "SASL_PASSWORD": "YOUR_SASL_PASSWORD_HERE",
+                "BROKER_LIST":"YOUR_BROKER_URL_HERE"
             },
             "args": []
         }
@@ -71,20 +77,22 @@ You have a kubernetes cluster and configured with kubectl.
 
 ### Start the ScaledJob
 
-#### Copy deploy-consumer-job.yaml.example to deploy-consumer-job.yaml
-Modify `YOUR_BASE64_CONNECTION_STRING_HERE` as your Storage Account Connection String with Base64 encoded. 
-
-Then Apply it. This will create a secret, ScaledJob with Storage Queue Trigger.
+#### Copy secret.yaml.example to secret.yaml
+Modify the following section. 
 
 ```
-$ kubectl apply -f deploy/deploy-consumer-job.yaml
+  sasl: "plaintext as base64"
+  username: "$ConnectionString as base64"
+  password: "YOUR_EVENT_HUBS_CONNECTION_STRING_BASE64"
+  tls: "enable as base64"
 ```
 
-Send queue to the target queue. You can do it with the `send` command. This command will send 3 messages with cleaning up existing messages.
+Then Apply it. This will create a secret for the ScaledJob.
 
 ```
-$ cd cmd/send
-$ export ConnectionString="YOUR_CONNECTION_STRING_HERE"
-$ export queueName=hello
-$ go run send.go 3
+$ kubectl apply -f secret.yaml
+$ kubectl apply -f scaledjob.yaml
 ```
+
+Send queue to the target queue. You can do it with the `send` command. 
+

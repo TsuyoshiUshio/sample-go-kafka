@@ -3,3 +3,9 @@ deploy/deploy-consumer-job.yaml
 __debug_bin
 
 setenv.sh
+run_receive.sh
+run_send.sh
+
+cmd/receive/receive
+cmd/send/send
+secret.yaml

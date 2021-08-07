@@ -1,5 +1,7 @@
 #!/bin/bash
 
-docker build . -t tsuyoshiushio/azure-servicebus-queue-client:dev
+VERSION=0.3
+docker build . -t tsuyoshiushio/kafka-consumer:$VERSION
 
-docker push tsuyoshiushio/azure-servicebus-queue-client:dev
+docker push tsuyoshiushio/kafka-consumer:$VERSION
+docker push tsuyoshiushio/kafka-consumer:latest

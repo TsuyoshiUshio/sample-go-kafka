@@ -1,45 +1,107 @@
 package main
 
 import (
-	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"flag"
 	"fmt"
 	"log"
 	"os"
-	"strconv"
-	"time"
+	"strings"
 
-	servicebus "github.com/Azure/azure-service-bus-go"
+	"github.com/Shopify/sarama"
 )
 
+var (
+	brokers = ""
+	version = ""
+	topics  = ""
+	count   = 0
+	message = ""
+	verbose = false
+)
+
+const (
+	saslPassword = "SASL_PASSWORD"
+	brokerList   = "BROKER_LIST"
+	topicsEnv    = "TOPICS"
+)
+
+func init() {
+	flag.StringVar(&brokers, "brokers", "", "Kafka bootstrap brokers to connect to, as a comma separated list")
+	flag.StringVar(&topics, "topics", "workitems", "Kafka topics to be consumed, as a comma separated list")
+	flag.BoolVar(&verbose, "verbose", true, "Sarama logging")
+	flag.IntVar(&count, "n", 1, "Number of the messages you want to send. default 1")
+	flag.StringVar(&message, "m", "message: hello", "Message that you want to send")
+	fmt.Println("Init end*****")
+}
+
 func main() {
-	fmt.Println("Azure ServiceBus Queue Sender")
-	connectionString := os.Getenv("ConnectionString")
-	queueName := os.Getenv("queueName")
-	if len(os.Args) != 2 {
-		log.Fatalf("Specify the counter parameter. e.g. send 100 Parameter length: %d\n", len(os.Args))
-	}
-	count, err := strconv.Atoi(os.Args[1])
-	if err != nil {
-		log.Fatalf("count should be integer : %s", os.Args[1])
-	}
-	// Create a client to communicate with a Service Bus Namespace
-	ns, err := servicebus.NewNamespace(servicebus.NamespaceWithConnectionString(connectionString))
-	if err != nil {
-		log.Fatal("Cannot create a client for the Service Bus Namespace", err)
+	log.Println("Starting a new Sarama producer")
+	fmt.Println("Parse*****")
+	flag.Parse()
+	flag.PrintDefaults()
+	if verbose {
+		sarama.Logger = log.New(os.Stdout, "[sarama] ", log.LstdFlags)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	// Create a client to communicate with the queue
-	q, err := ns.NewQueue(queueName)
+	//	version, err := sarama.ParseKafkaVersion(version)
+	//	if err != nil {
+	//		log.Panicf("Error parsing Kafka version: %v", err)
+	//	}
+
+	config := sarama.NewConfig()
+	config.Version = sarama.V1_0_0_0
+
+	config.Net.SASL.Enable = true
+	config.Net.SASL.User = "$ConnectionString"
+	config.Net.SASL.Password = os.Getenv(saslPassword)
+
+	// config.Producer.Retry.Max = 1   // default 3
+	// config.Producer.RequiredAcks = sarama.WaitForAll
+	// config.Producer.Return.Successes = true
+
+	if len(brokers) == 0 {
+		brokers = os.Getenv(brokerList)
+		if len(brokers) == 0 {
+			log.Panicf("BrokerList is empty. Set brokers as environment variables: %s or -brokers option", brokerList)
+		}
+	}
+
+	topicsEnvValue := os.Getenv(topicsEnv)
+	if len(topicsEnvValue) > 0 {
+		topics = topicsEnvValue
+	}
+
+	log.Println("broker:" + brokers)
+	log.Println("SASL_PASS:" + config.Net.SASL.Password)
+	log.Println("Topic:" + topics)
+	log.Printf("Count: %d\n", count)
+	log.Printf("Message: %s\n", message)
+
+	config.Net.TLS.Enable = true
+
+	tlsConfig := &tls.Config{}
+
+	caCert := "cacert body" // If it necessary
+	if caCert != "" {
+		caCertPool := x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM([]byte(caCert))
+		tlsConfig.RootCAs = caCertPool
+		tlsConfig.InsecureSkipVerify = true
+	}
+	brokerList := strings.Split(brokers, ",")
+	producer, err := sarama.NewAsyncProducer(brokerList, config)
 	if err != nil {
-		log.Fatal("Cannot create a client for the queue", err)
+		log.Panicf("Error creating producer client: %v", err)
 	}
 	for i := 0; i < count; i++ {
-		err = q.Send(ctx, servicebus.NewMessageFromString("Hello!"))
-		fmt.Printf("Send Hello %d \n", i)
-		if err != nil {
-			log.Fatal(err)
-		}
+		producer.Input() <- &sarama.ProducerMessage{Topic: topics, Value: sarama.StringEncoder(message)}
+		log.Printf("Message: '%s' sent", message)
+	}
+
+	if err := producer.Close(); err != nil {
+		log.Panicf("Error closing producer client: %v", err)
+
 	}
 }
