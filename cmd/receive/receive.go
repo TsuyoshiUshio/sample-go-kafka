@@ -149,8 +149,9 @@ func main() {
 	consumer := Consumer{
 		ready: make(chan bool),
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
+	deadline := time.Now().Add(time.Second * 30) // after the timeout gracefully shutdown.
+	ctx, cancel := context.WithDeadline(context.Background(), deadline)
+	defer cancel()
 	client, err := sarama.NewConsumerGroup(strings.Split(brokers, ","), group, config)
 	if err != nil {
 		log.Panicf("Error creating consumer group client: %v", err)
@@ -185,12 +186,11 @@ func main() {
 		log.Println("Consumed.")
 		break
 	case <-ctx.Done():
-		log.Println("terminating: context cancelled")
+		log.Println("terminating: context timeout")
 	case <-sigterm:
 		log.Println("terminating: via signal")
 	}
 	fmt.Println("a")
-	cancel()
 	fmt.Println("b")
 	wg.Wait()
 	fmt.Println("c")

@@ -9,3 +9,5 @@ run_send.sh
 cmd/receive/receive
 cmd/send/send
 secret.yaml
+
+pod-secret.yaml

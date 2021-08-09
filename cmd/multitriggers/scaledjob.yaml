@@ -1,7 +1,7 @@
 apiVersion: keda.sh/v1alpha1
 kind: ScaledJob
 metadata: 
-  name: kafka-consumer
+  name: multi-triggers-consumer
   namespace: default
 spec:
   jobTargetRef:
@@ -11,15 +11,15 @@ spec:
           hello: world
       spec:
         containers:
-        - name: kafka-consumer
-          image: tsuyoshiushio/kafka-consumer:0.2
+        - name: multi-trigger-consumer
+          image: tsuyoshiushio/kafka-consumer:0.6
           imagePullPolicy: Always
           envFrom:
           - secretRef:
-              name: keda-kafka-pod-secrets
+              name: keda-multitriggers-pod-secrets
         restartPolicy: Never
-  pollingInterval: 5
-  maxReplicaCount: 10
+  pollingInterval: 30
+  maxReplicaCount: 100
   successfulJobsHistoryLimit: 10
   failedJobsHistoryLimit: 10
   triggers:
@@ -28,9 +28,16 @@ spec:
       bootstrapServers: tsushikafka.servicebus.windows.net:9093
       consumerGroup: $Default
       topic: workitems
-      lagThreshold: '5'
+      lagThreshold: '1'
     authenticationRef:
       name: kafka-trigger-auth
+  - type: azure-queue
+    metadata:
+      queueName: queue
+      queueLength: '2'
+      connectionFromEnv: STORAGE_CONNECTION_STRING
+      accountName: tsushistorage 
+      cloud: AzurePublicCloud
 ---
 apiVersion: keda.sh/v1alpha1
 kind: TriggerAuthentication
